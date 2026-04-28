@@ -1,19 +1,45 @@
 import calendar
-import datetime
+import json
+import os
+from datetime import date, datetime, timedelta
 import pyttsx3
 
+ARCHIVO_EVENTOS = "eventos_calendario.json"
+
 engine = pyttsx3.init()
-engine.setProperty("rate", 170)
-engine.setProperty("volume", 1.0)
+engine.setProperty("rate", 180)
+
+MESES = [
+    "Enero", "Febrero", "Marzo", "Abril",
+    "Mayo", "Junio", "Julio", "Agosto",
+    "Septiembre", "Octubre", "Noviembre", "Diciembre"
+]
+
+DIAS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"]
+
 
 def hablar(texto):
+    print(texto)
     engine.say(texto)
     engine.runAndWait()
 
-def calcular_pascua(año):
-    a = año % 19
-    b = año // 100
-    c = año % 100
+
+def cargar_eventos():
+    if os.path.exists(ARCHIVO_EVENTOS):
+        with open(ARCHIVO_EVENTOS, "r", encoding="utf-8") as archivo:
+            return json.load(archivo)
+    return {}
+
+
+def guardar_eventos(eventos):
+    with open(ARCHIVO_EVENTOS, "w", encoding="utf-8") as archivo:
+        json.dump(eventos, archivo, ensure_ascii=False, indent=4)
+
+
+def calcular_pascua(anio):
+    a = anio % 19
+    b = anio // 100
+    c = anio % 100
     d = b // 4
     e = b % 4
     f = (b + 8) // 25
@@ -25,151 +51,163 @@ def calcular_pascua(año):
     m = (a + 11 * h + 22 * l) // 451
     mes = (h + l - 7 * m + 114) // 31
     dia = ((h + l - 7 * m + 114) % 31) + 1
-    return datetime.date(año, mes, dia)
+    return date(anio, mes, dia)
 
-def obtener_festivos(año):
-    pascua = calcular_pascua(año)
-    jueves_santo = pascua - datetime.timedelta(days=3)
-    viernes_santo = pascua - datetime.timedelta(days=2)
-    domingo_ramos = pascua - datetime.timedelta(days=7)
-    sabado_santo = pascua - datetime.timedelta(days=1)
-    lunes_pascua = pascua + datetime.timedelta(days=1)
+
+def siguiente_lunes(fecha):
+    while fecha.weekday() != 0:
+        fecha += timedelta(days=1)
+    return fecha
+
+
+def segundo_domingo(anio, mes):
+    d = date(anio, mes, 1)
+    while d.weekday() != 6:
+        d += timedelta(days=1)
+    return d + timedelta(days=7)
+
+
+def tercer_domingo(anio, mes):
+    return segundo_domingo(anio, mes) + timedelta(days=7)
+
+
+def festivos_colombia(anio):
+    pascua = calcular_pascua(anio)
 
     festivos = {
-        (1, 1): "Año nuevo",
-        (6, 1): "Reyes Magos",
-        (8, 3): "Día de la Mujer",
-        (19, 3): "San José",
+        date(anio, 1, 1): "Año Nuevo",
+        date(anio, 5, 1): "Día del Trabajo",
+        date(anio, 7, 20): "Independencia de Colombia",
+        date(anio, 8, 7): "Batalla de Boyacá",
+        date(anio, 12, 8): "Inmaculada Concepción",
+        date(anio, 12, 25): "Navidad",
 
-        (domingo_ramos.day, domingo_ramos.month): "Domingo de Ramos",
-        (jueves_santo.day, jueves_santo.month): "Jueves Santo",
-        (viernes_santo.day, viernes_santo.month): "Viernes Santo",
-        (sabado_santo.day, sabado_santo.month): "Sábado Santo",
-        (pascua.day, pascua.month): "Domingo de Pascua",
-        (lunes_pascua.day, lunes_pascua.month): "Lunes de Pascua",
+        siguiente_lunes(date(anio, 1, 6)): "Reyes Magos",
+        siguiente_lunes(date(anio, 3, 19)): "San José",
+        siguiente_lunes(date(anio, 6, 29)): "San Pedro y San Pablo",
+        siguiente_lunes(date(anio, 8, 15)): "Asunción de la Virgen",
+        siguiente_lunes(date(anio, 10, 12)): "Día de la Raza",
+        siguiente_lunes(date(anio, 11, 1)): "Todos los Santos",
+        siguiente_lunes(date(anio, 11, 11)): "Independencia de Cartagena",
 
-        (11, 5): "Día de la Madre",
-        (15, 5): "Día del Maestro",
-        (15, 6): "Día del Padre",
+        pascua - timedelta(days=3): "Jueves Santo",
+        pascua - timedelta(days=2): "Viernes Santo",
+        pascua + timedelta(days=43): "Ascensión del Señor",
+        pascua + timedelta(days=64): "Corpus Christi",
+        pascua + timedelta(days=71): "Sagrado Corazón",
 
-        (20, 7): "Día de la Independencia",
-        (15, 8): "Asunción de la Virgen",
-        (12, 10): "Día de la Raza",
-        (1, 11): "Día de Todos los Santos",
-        (3, 11): "Día de los Muertos",
-
-        (14, 11): "Cumpleaños del desarrollador",
-
-        (11, 11): "Independencia de Cartagena",
-        (7, 12): "Día de las Velitas",
-        (8, 12): "Inmaculada Concepción",
-        (24, 12): "Noche Buena",
-        (25, 12): "Navidad",
-        (31, 12): "Año Viejo"
+        segundo_domingo(anio, 5): "Día de la Madre",
+        tercer_domingo(anio, 6): "Día del Padre"
     }
 
     return festivos
 
-meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-]
 
-dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+def mostrar_mes(anio, mes):
+    print()
+    print(MESES[mes - 1], anio)
+    print(" ".join(DIAS))
 
-hablar("Bienvenido al calendario accesible auditivo")
-print("Bienvenido al calendario accesible auditivo")
+    semanas = calendar.monthcalendar(anio, mes)
 
-while True:
-    print("\nSeleccione una opción:")
-    print("1. Ver calendario de un mes")
-    print("2. Calcular qué día cae una fecha y cuántos días faltan")
-    print("3. Salir")
-
-    hablar("Seleccione una opción. Uno para ver el calendario mensual, dos para calcular el día de una fecha, o tres para salir.")
-
-    opcion = input("Ingrese una opción: ")
-
-    if opcion == "1":
-        try:
-            numero_mes = int(input("Ingrese número del mes (1-12): "))
-            año = int(input("Ingrese el año: "))
-
-            if 1 <= numero_mes <= 12:
-
-                nombre_mes = meses[numero_mes - 1]
-                festivos = obtener_festivos(año)
-
-                print(f"\n📅 Calendario de {nombre_mes} {año}:\n")
-                hablar(f"Calendario de {nombre_mes} del año {año}")
-
-                cal = calendar.TextCalendar(firstweekday=0)
-                calendario_str = cal.formatmonth(año, numero_mes)
-
-                for eng, esp in zip(["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], dias_semana):
-                    calendario_str = calendario_str.replace(eng, esp[:2])
-
-                print(calendario_str)
-
-                primer_dia, total_dias = calendar.monthrange(año, numero_mes)
-
-                print("🎉 Días festivos del mes:\n")
-                for dia in range(1, total_dias + 1):
-                    if (dia, numero_mes) in festivos:
-                        nombre = festivos[(dia, numero_mes)]
-                        print(f"📌 {dia} de {nombre_mes}: {nombre}")
-                        hablar(f"El {dia} de {nombre_mes} es {nombre}")
-
-                dia_inicio = dias_semana[primer_dia]
-                hablar(f"El mes de {nombre_mes} empieza en {dia_inicio} y tiene {total_dias} días.")
-
+    for semana in semanas:
+        fila = []
+        for dia in semana:
+            if dia == 0:
+                fila.append("  ")
             else:
-                print("❌ Número de mes no válido")
-                hablar("Número de mes no válido")
+                fila.append(str(dia).rjust(2))
+        print(" ".join(fila))
 
-        except ValueError:
-            print("❌ Entrada inválida.")
-            hablar("Entrada inválida.")
 
-    elif opcion == "2":
-        fecha_str = input("Ingrese una fecha (dd/mm/aaaa): ")
-        try:
-            fecha_obj = datetime.datetime.strptime(fecha_str, "%d/%m/%Y").date()
-            hoy = datetime.date.today()
+def ver_dia(anio, mes, dia, eventos):
+    try:
+        fecha = date(anio, mes, dia)
+    except ValueError:
+        hablar("Fecha inválida")
+        return
 
-            festivos = obtener_festivos(fecha_obj.year)
+    hablar(fecha.strftime("%A %d de %B de %Y"))
 
-            nombre_dia = dias_semana[fecha_obj.weekday()]
-            dias_restantes = (fecha_obj - hoy).days
+    festivos = festivos_colombia(anio)
 
-            print(f"\n📅 La fecha {fecha_str} cae en {nombre_dia}.")
-            hablar(f"Esa fecha cae en {nombre_dia}")
+    if fecha in festivos:
+        hablar("Festivo: " + festivos[fecha])
 
-            clave = (fecha_obj.day, fecha_obj.month)
-            if clave in festivos:
-                festivo = festivos[clave]
-                print(f"🎉 Es un día festivo: {festivo}")
-                hablar(f"Es un día festivo: {festivo}")
+    clave = fecha.isoformat()
 
-            if dias_restantes > 0:
-                print(f"⏳ Faltan {dias_restantes} días para esa fecha.")
-                hablar(f"Faltan {dias_restantes} días para esa fecha.")
-            elif dias_restantes == 0:
-                print("✅ Esa fecha es hoy.")
-                hablar("Esa fecha es hoy.")
-            else:
-                print(f"📅 Esa fecha cayó hace {abs(dias_restantes)} días.")
-                hablar(f"Esa fecha cayó hace {abs(dias_restantes)} días.")
+    if clave in eventos:
+        hablar("Evento: " + eventos[clave])
 
-        except ValueError:
-            print("❌ Formato inválido. Use el formato dd/mm/aaaa.")
-            hablar("Formato inválido. Intente de nuevo.")
 
-    elif opcion == "3":
-        print("Gracias por usar el calendario accesible.")
-        hablar("Gracias por usar el calendario accesible.")
-        break
+def agregar_evento(eventos):
+    try:
+        texto = input("Fecha AAAA-MM-DD: ").strip()
+        fecha = datetime.strptime(texto, "%Y-%m-%d").date()
 
-    else:
-        print("❌ Opción no válida, intente de nuevo.")
-        hablar("Opción no válida, intente de nuevo.")
+        descripcion = input("Descripción: ").strip()
+
+        eventos[fecha.isoformat()] = descripcion
+        guardar_eventos(eventos)
+
+        hablar("Evento guardado")
+
+    except ValueError:
+        hablar("Formato de fecha inválido")
+
+
+def listar_eventos(eventos):
+    if not eventos:
+        hablar("No hay eventos guardados")
+        return
+
+    for clave in sorted(eventos):
+        print(clave, "-", eventos[clave])
+
+
+def menu():
+    eventos = cargar_eventos()
+
+    while True:
+        print()
+        print("1. Ver mes")
+        print("2. Consultar día")
+        print("3. Agregar evento")
+        print("4. Listar eventos")
+        print("5. Hoy")
+        print("6. Salir")
+
+        opcion = input("Opción: ").strip()
+
+        if opcion == "1":
+            anio = int(input("Año: "))
+            mes = int(input("Mes (1-12): "))
+            mostrar_mes(anio, mes)
+
+        elif opcion == "2":
+            anio = int(input("Año: "))
+            mes = int(input("Mes: "))
+            dia = int(input("Día: "))
+            ver_dia(anio, mes, dia, eventos)
+
+        elif opcion == "3":
+            agregar_evento(eventos)
+
+        elif opcion == "4":
+            listar_eventos(eventos)
+
+        elif opcion == "5":
+            hoy = date.today()
+            ver_dia(hoy.year, hoy.month, hoy.day, eventos)
+
+        elif opcion == "6":
+            engine.stop()
+            hablar("Hasta luego")
+            break
+
+        else:
+            hablar("Opción inválida")
+
+
+if __name__ == "__main__":
+    menu()
