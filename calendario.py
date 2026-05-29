@@ -4,6 +4,7 @@ import os
 from datetime import date, datetime, timedelta
 import pyttsx3
 
+calendar.setfirstweekday(calendar.MONDAY)
 ARCHIVO_EVENTOS = "eventos_calendario.json"
 
 engine = pyttsx3.init()
@@ -147,6 +148,9 @@ def festivos_colombia(anio):
         date(anio, 1, 1):
         "Año Nuevo",
 
+        date(anio, 3, 8):
+        "Día de la mujer",
+
         date(anio, 5, 1):
         "Día del Trabajo",
 
@@ -164,6 +168,10 @@ def festivos_colombia(anio):
 
         date(anio, 11, 14):
         "Cumpleaños del desarrollador",
+
+        date(anio, 12, 31):
+        "Año viejo",
+
 
         siguiente_lunes(
             date(anio, 1, 6)
@@ -452,26 +460,50 @@ def agregar_evento(eventos):
 
 def eliminar_evento(eventos):
 
-    clave = input(
+    texto = input(
         "Ingrese fecha del evento "
-        "AAAA-MM-DD: "
+        "(AAAA-MM-DD o DD/MM/AAAA): "
     ).strip()
 
-    if clave in eventos:
+    try:
 
-        del eventos[clave]
+        try:
 
-        guardar_eventos(eventos)
+            fecha = datetime.strptime(
+                texto,
+                "%Y-%m-%d"
+            ).date()
+
+        except ValueError:
+
+            fecha = datetime.strptime(
+                texto,
+                "%d/%m/%Y"
+            ).date()
+
+        clave = fecha.isoformat()
+
+        if clave in eventos:
+
+            del eventos[clave]
+
+            guardar_eventos(eventos)
+
+            hablar(
+                "Evento eliminado"
+            )
+
+        else:
+
+            hablar(
+                "No existe un evento "
+                "en esa fecha"
+            )
+
+    except ValueError:
 
         hablar(
-            "Evento eliminado"
-        )
-
-    else:
-
-        hablar(
-            "No existe un evento "
-            "en esa fecha"
+            "Formato de fecha inválido"
         )
 
 
