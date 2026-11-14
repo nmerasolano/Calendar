@@ -36,7 +36,7 @@ def menu():
 
     hablar(
         "Bienvenido al calendario "
-        "accesible auditivo"
+        "accesible auditivo."
     )
 
     while True:
@@ -44,31 +44,31 @@ def menu():
         print()
 
         print(
-            "1. Ver mes"
+            "1. Ver mes."
         )
 
         print(
-            "2. Consultar día"
+            "2. Consultar día."
         )
 
         print(
-            "3. Agregar evento"
+            "3. Agregar evento."
         )
 
         print(
-            "4. Listar eventos"
+            "4. Listar eventos."
         )
 
         print(
-            "5. Mostrar fecha actual"
+            "5. Mostrar fecha actual."
         )
 
         print(
-            "6. Eliminar evento"
+            "6. Eliminar evento."
         )
 
         print(
-            "7. Salir"
+            "7. Salir."
         )
 
         opcion = input(
@@ -157,7 +157,7 @@ def menu():
         elif opcion == "7":
 
             hablar(
-                "Hasta luego"
+                "Hasta luego. Gracias por utilizar el programa"
             )
 
             engine.stop()
@@ -167,7 +167,7 @@ def menu():
         else:
 
             hablar(
-                "Opción inválida"
+                "Opción inválida. Intente de nuevo, por favor"
             )
 
 
